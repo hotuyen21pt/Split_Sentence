@@ -16,8 +16,8 @@ def iter_records_txt(path: Union[str, Path]) -> Iterator[dict]:
         sentiment
     Blocks may be separated by blank lines.
 
-    $T$ in the sentence is replaced with the aspect term before segmentation
-    so the LLM receives a complete, readable sentence.
+    $T$ in the sentence is kept as-is, and aspect_term is provided separately
+    so the LLM can focus on extracting that specific aspect.
     """
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     buf: list[str] = []
@@ -30,13 +30,15 @@ def iter_records_txt(path: Union[str, Path]) -> Iterator[dict]:
         buf.append(stripped)
         if len(buf) == 4:
             raw_sentence, aspect_term, category, sentiment = buf
-            sentence = raw_sentence.replace("$T$", aspect_term)
+            sentence_expanded = raw_sentence.replace("$T$", aspect_term)
             yield {
                 "entity_id": str(idx),
                 "review_id": str(idx),
                 "sentence_idx": idx,
-                "sentence": sentence,
+                "sentence": raw_sentence,
+                "sentence_expanded": sentence_expanded,
                 "raw_sentence": raw_sentence,
+                "aspect_term": aspect_term,
                 "aspect_terms": aspect_term,
                 "categories": category,
                 "sentiments": sentiment,

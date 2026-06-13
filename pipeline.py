@@ -17,10 +17,10 @@ def _default_progress(done: int, total: Optional[int], latency_s: float, sentenc
     print(f"  [{done}/{total_str}] {latency_s:.1f}s | {preview}", flush=True)
 
 
-def segment_one(segmenter, sentence: str) -> tuple[List[str], str]:
+def segment_one(segmenter, sentence: str, aspect_term: str = "") -> tuple[List[str], str]:
     if hasattr(segmenter, "segment_with_raw"):
-        return segmenter.segment_with_raw(sentence)
-    return list(segmenter.segment(sentence)), ""
+        return segmenter.segment_with_raw(sentence, aspect_term)
+    return list(segmenter.segment(sentence, aspect_term)), ""
 
 
 def run_corpus(
@@ -35,7 +35,11 @@ def run_corpus(
     for i, meta in enumerate(records, start=1):
         t0 = time.perf_counter()
         try:
-            units, raw = segment_one(segmenter, meta["sentence"])
+            aspect_term = meta.get("aspect_term", "")
+            units, raw = segment_one(segmenter, meta["sentence"], aspect_term)
+            # Replace aspect_term back to $T$ to preserve original placeholder
+            if aspect_term:
+                units = [u.replace(aspect_term, "$T$") for u in units]
         except Exception as exc:
             units = [meta["sentence"]]
             raw = f"ERROR: {exc}"

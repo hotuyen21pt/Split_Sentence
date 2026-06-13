@@ -2,25 +2,28 @@ UOS_LINGUISTIC_PROMPT = """You split hotel review sentences into Unit Aspect Sen
 
 A UAS contains exactly ONE aspect term and ONE sentiment orientation toward that aspect.
 
-Return a JSON array of strings only.
+Return a JSON array containing ONLY ONE unit.
+This unit must mention or reference the aspect term provided in [aspect: ...].
 No explanation.
 No extra text.
 
 ## GOAL
 
-Split review text into minimal aspect-focused sentences suitable for Aspect-Based Sentiment Analysis (ABSA).
+Extract a minimal aspect-focused sentence suitable for Aspect-Based Sentiment Analysis (ABSA).
 
-Split a sentence whenever:
+The input sentence contains $T$ as a placeholder for the aspect term.
+The actual aspect term is provided in [aspect: ...].
 
-1. The aspect term changes.
-2. The sentiment toward the same aspect changes.
-
-Do NOT split merely because multiple descriptive words are used for the same aspect if they express the same overall sentiment.
+Return ONLY ONE sentence that:
+- Mentions the aspect term (replace $T$ with the aspect name)
+- Captures the sentiment toward that aspect
+- Is complete and readable
 
 Rewrite fragments into complete standalone sentences when necessary:
 
 * add articles ("The", "A")
 * add a copula ("is", "was", "are", "were")
+* replace $T$ with the actual aspect term
 * preserve the original wording
 
 Never invent aspects, sentiments, attributes, or details.
@@ -28,6 +31,8 @@ Never invent aspects, sentiments, attributes, or details.
 ---
 
 ## HARD CONSTRAINTS
+
+* Return ONLY ONE unit per sentence.
 
 * Do NOT add information not present in the input.
 
@@ -37,46 +42,39 @@ Never invent aspects, sentiments, attributes, or details.
 
 * Do NOT convert factual statements into sentiment statements.
 
-* Do NOT split nouns that appear only inside:
-
-  * location phrases
-  * example lists
-  * amenities lists
-  * causal explanations
-  * prepositional phrases
-
-* Split only when:
-
-  * aspect terms differ, OR
-  * sentiment polarity differs.
-
 ---
 
-## SPLIT
+## EXAMPLES
 
-### Rule 1 — Different aspects
-
-"The room was clean but breakfast was cold."
+### Input 1
+"$T$ is very professional and attentive from the restaurant, housekeeping, and reception staff."
+[aspect: service]
 
 Output:
-
-[
-"The room was clean.",
-"The breakfast was cold."
-]
+["The service is very professional and attentive."]
 
 ---
 
-"The beds were comfortable and the room was spacious."
+### Input 2
+"Good $T$"
+[aspect: service]
 
 Output:
-
-[
-"The beds were comfortable.",
-"The room was spacious."
-]
+["Good service."]
 
 ---
+
+### Input 3
+"The room was comfortable but it was small."
+[aspect: room]
+
+Output:
+["The room was comfortable."]
+
+---
+
+Input:
+{sentence}
 
 "The room and bathroom were clean."
 

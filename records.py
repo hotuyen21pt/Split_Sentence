@@ -20,8 +20,10 @@ def build_record(
     ok: bool | None = None,
 ) -> dict:
     units = validate_units(meta["sentence"], list(units))
+    # Use sentence_expanded (with $T$ replaced) for metrics if available
+    sentence_for_metrics = meta.get("sentence_expanded", meta["sentence"])
     token_recall, char_coverage, was_split = compute_sentence_unit_metrics(
-        meta["sentence"], units
+        sentence_for_metrics, units
     )
     record: dict = {
         "entity_id": meta["entity_id"],
@@ -29,7 +31,7 @@ def build_record(
         "sentence_idx": meta["sentence_idx"],
         "sentence": meta["sentence"],
         "units": units,
-        "warnings": detect_warnings(meta["sentence"], units),
+        "warnings": detect_warnings(sentence_for_metrics, units),
         "raw_response": raw_response,
         "metrics": {
             "n_units": len(units),
@@ -39,7 +41,7 @@ def build_record(
             "information_loss_token": round(1 - token_recall, 4),
             "information_loss_char": round(1 - char_coverage, 4),
             "unsupported_token_rate": round(
-                unsupported_token_rate(meta["sentence"], units), 4
+                unsupported_token_rate(sentence_for_metrics, units), 4
             ),
             "latency_s": round(latency_s, 3),
         },

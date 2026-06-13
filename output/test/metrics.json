@@ -2,12 +2,12 @@
   "model": "qwen3:8b",
   "prompt_version": "linguistic_v11",
   "summary": {
-    "n_sentences": 5,
-    "split_rate": 0.2,
-    "warning_rate": 0.0,
-    "units_per_sentence_mean": 1.2,
-    "token_recall_mean": 0.98,
-    "char_coverage_mean": 0.9742,
-    "latency_s_mean": 25.7378
+    "n_sentences": 1,
+    "split_rate": 0.0,
+    "warning_rate": 1.0,
+    "units_per_sentence_mean": 1.0,
+    "token_recall_mean": 0.1053,
+    "char_coverage_mean": 0.2258,
+    "latency_s_mean": 3.962
   }
 }

@@ -19,8 +19,15 @@ def resolve_model_name(name: str) -> str:
     return MODEL_ALIASES.get(name.strip(), name.strip())
 
 
-def build_prompt(sentence: str) -> str:
-    return UOS_LINGUISTIC_PROMPT.replace("{sentence}", sentence.strip())
+def build_prompt(sentence: str, aspect_term: str = "") -> str:
+    """Build prompt for UOS segmentation.
+    
+    If aspect_term is provided, appends [aspect: ...] to the sentence.
+    """
+    input_text = sentence.strip()
+    if aspect_term:
+        input_text = f"{input_text}\n[aspect: {aspect_term}]"
+    return UOS_LINGUISTIC_PROMPT.replace("{sentence}", input_text)
 
 
 class OllamaUOSSegmenter:
@@ -68,17 +75,18 @@ class OllamaUOSSegmenter:
             ) from e
         return str((data.get("message") or {}).get("content", ""))
 
-    def segment_with_raw(self, sentence: str) -> tuple[List[str], str]:
-        raw = self._call(build_prompt(sentence))
+    def segment_with_raw(self, sentence: str, aspect_term: str = "") -> tuple[List[str], str]:
+        raw = self._call(build_prompt(sentence, aspect_term))
         units = parse_units(raw) or [sentence.strip()]
         return validate_units(sentence, units), raw
 
-    def segment(self, sentence: str) -> List[str]:
-        units, _ = self.segment_with_raw(sentence)
+    def segment(self, sentence: str, aspect_term: str = "") -> List[str]:
+        units, _ = self.segment_with_raw(sentence, aspect_term)
         return units
 
-    def segment_batch(self, sentences: Sequence[str]) -> List[List[str]]:
-        return [self.segment(s) for s in sentences]
+    def segment_batch(self, sentences: Sequence[str], aspect_terms: Sequence[str] = ()) -> List[List[str]]:
+        aspect_terms = list(aspect_terms) if aspect_terms else [""] * len(sentences)
+        return [self.segment(s, a) for s, a in zip(sentences, aspect_terms)]
 
 
 def check_ollama(host: str = "http://localhost:11434", model_name: str = "Qwen3-8B-Instruct") -> None:
