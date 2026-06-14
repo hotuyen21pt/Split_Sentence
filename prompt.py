@@ -1,386 +1,65 @@
-UOS_LINGUISTIC_PROMPT = """You split hotel review sentences into Unit Aspect Sentences (UAS).
+UOS_LINGUISTIC_PROMPT = """Extract exactly ONE sentence about the given aspect term from a hotel review.
 
-A UAS contains exactly ONE aspect term and ONE sentiment orientation toward that aspect.
+Return a JSON array containing exactly ONE string. No explanation, no extra text.
 
-Return a JSON array containing ONLY ONE unit.
-This unit must mention or reference the aspect term provided in [aspect: ...].
-No explanation.
-No extra text.
 
 ## GOAL
 
-Extract a minimal aspect-focused sentence suitable for Aspect-Based Sentiment Analysis (ABSA).
+The input has two parts:
+- A sentence (may mention multiple targets)
+- [aspect: X] — the target you must focus on
 
-The input sentence contains $T$ as a placeholder for the aspect term.
-The actual aspect term is provided in [aspect: ...].
+Extract only the clause that describes the aspect term X.
+Ignore all other targets or opinions not related to X.
 
-Return ONLY ONE sentence that:
-- Mentions the aspect term (replace $T$ with the aspect name)
-- Captures the sentiment toward that aspect
-- Is complete and readable
 
-Rewrite fragments into complete standalone sentences when necessary:
+## RULES
 
-* add articles ("The", "A")
-* add a copula ("is", "was", "are", "were")
-* replace $T$ with the actual aspect term
-* preserve the original wording
+1. Return ONLY the clause about [aspect: X]. Drop everything else.
+2. Preserve the original words — do NOT paraphrase or substitute any word.
+3. Make the clause a complete standalone sentence if it is a fragment:
+   - Add "The" or "A" if missing
+   - Add a copula ("is", "was", "are", "were") if missing
+4. Keep ALL opinions about X in one clause — do NOT split by sentiment.
+5. Never invent words, adjectives, or sentiments not in the input.
 
-Never invent aspects, sentiments, attributes, or details.
-
----
-
-## HARD CONSTRAINTS
-
-* Return ONLY ONE unit per sentence.
-
-* Do NOT add information not present in the input.
-
-* Do NOT invent aspect terms.
-
-* Do NOT invent sentiment.
-
-* Do NOT convert factual statements into sentiment statements.
-
----
 
 ## EXAMPLES
 
-### Input 1
-"$T$ is very professional and attentive from the restaurant, housekeeping, and reception staff."
-[aspect: service]
-
-Output:
-["The service is very professional and attentive."]
-
----
-
-### Input 2
-"Good $T$"
-[aspect: service]
-
-Output:
-["Good service."]
-
----
-
-### Input 3
-"The room was comfortable but it was small."
+Input: "The room was clean but the breakfast was cold."
 [aspect: room]
+Output: ["The room was clean."]
 
-Output:
-["The room was comfortable."]
+Input: "The room was clean but the breakfast was cold."
+[aspect: breakfast]
+Output: ["The breakfast was cold."]
 
----
+Input: "The room was spacious but noisy."
+[aspect: room]
+Output: ["The room was spacious but noisy."]
+
+Input: "The breakfast was delicious but expensive."
+[aspect: breakfast]
+Output: ["The breakfast was delicious but expensive."]
+
+Input: "Good service."
+[aspect: service]
+Output: ["Good service."]
+
+Input: "Very comfortable room and bed."
+[aspect: bed]
+Output: ["Very comfortable bed."]
+
+Input: "The room was lovely with a beautiful view and a large balcony."
+[aspect: view]
+Output: ["The view was beautiful."]
+
+Input: "Lovely hotel room, good beds, nice staff."
+[aspect: staff]
+Output: ["Nice staff."]
+
 
 Input:
 {sentence}
 
-"The room and bathroom were clean."
-
-Output:
-
-[
-"The room was clean.",
-"The bathroom was clean."
-]
-
----
-
-### Rule 2 — Shared sentiment across different aspects
-
-"Beautiful room and pool."
-
-Output:
-
-[
-"The room was beautiful.",
-"The pool was beautiful."
-]
-
----
-
-"Very comfortable room and bed."
-
-Output:
-
-[
-"The room was very comfortable.",
-"The bed was very comfortable."
-]
-
----
-
-"The mattress and pillows are comfortable."
-
-Output:
-
-[
-"The mattress was comfortable.",
-"The pillows were comfortable."
-]
-
----
-
-### Rule 3 — Same aspect but different sentiment
-
-"The breakfast was delicious but expensive."
-
-Output:
-
-[
-"The breakfast was delicious.",
-"The breakfast was expensive."
-]
-
----
-
-"The room was spacious but noisy."
-
-Output:
-
-[
-"The room was spacious.",
-"The room was noisy."
-]
-
----
-
-"The location was convenient but crowded."
-
-Output:
-
-[
-"The location was convenient.",
-"The location was crowded."
-]
-
----
-
-### Rule 4 — Distinct aspect fragments
-
-"Lovely hotel room, good beds, nice staff."
-
-Output:
-
-[
-"Lovely hotel room.",
-"Good beds.",
-"Nice staff."
-]
-
----
-
-"Nice bungalow and clean beach. Good food in the restaurant. Beautiful sunset."
-
-Output:
-
-[
-"Nice bungalow.",
-"Clean beach.",
-"Good food in the restaurant.",
-"Beautiful sunset."
-]
-
----
-
-### Rule 5 — Separate physical spaces introduced by 'with'
-
-"Very spacious room with a huge bathroom."
-
-Output:
-
-[
-"The room was very spacious.",
-"The bathroom was huge."
-]
-
----
-
-"The room was lovely with a beautiful view and a large balcony."
-
-Output:
-
-[
-"The room was lovely.",
-"The view was beautiful.",
-"The balcony was large."
-]
-
----
-
-"The room is comfortable, quiet, with a very large bed and a renovated bathroom."
-
-Output:
-
-[
-"The room is comfortable and quiet.",
-"The bed was very large.",
-"The bathroom was renovated."
-]
-
----
-
-## DO NOT SPLIT
-
-### Rule 1 — Same aspect, same sentiment
-
-"The room was spacious, clean and comfortable."
-
-Output:
-
-[
-"The room was spacious, clean and comfortable."
-]
-
----
-
-"The hotel is clean, nice, safe and quiet."
-
-Output:
-
-[
-"The hotel is clean, nice, safe and quiet."
-]
-
----
-
-"The bathroom was modern and very clean."
-
-Output:
-
-[
-"The bathroom was modern and very clean."
-]
-
----
-
-### Rule 2 — Holistic review statements
-
-"Loved the whole experience, from the decor to the food to the room."
-
-Output:
-
-[
-"Loved the whole experience, from the decor to the food to the room."
-]
-
----
-
-### Rule 3 — Context plus one aspect statement
-
-"We arrived at 3pm but the room was dirty."
-
-Output:
-
-[
-"We arrived at 3pm but the room was dirty."
-]
-
----
-
-### Rule 4 — Pure facts
-
-"There are two elevators."
-
-Output:
-
-[
-"There are two elevators."
-]
-
----
-
-### Rule 5 — Causal explanation
-
-"We couldn't shower because the shower head was above the toilet and sink."
-
-Output:
-
-[
-"We couldn't shower because the shower head was above the toilet and sink."
-]
-
----
-
-### Rule 6 — Amenities and accessories
-
-"The bathroom was clean with shampoo, shower gel and hand soap."
-
-Output:
-
-[
-"The bathroom was clean with shampoo, shower gel and hand soap."
-]
-
----
-
-"A large swimming pool with sun loungers."
-
-Output:
-
-[
-"A large swimming pool with sun loungers."
-]
-
----
-
-### Rule 7 — View and location context
-
-"Fantastic view over the river and promenade."
-
-Output:
-
-[
-"The view over the river and promenade was fantastic."
-]
-
----
-
-"There was a rooftop pool with a great view."
-
-Output:
-
-[
-"There was a rooftop pool with a great view."
-]
-
----
-
-## DECISION GUIDE
-
-Split if:
-
-✓ aspect term changes
-
-✓ sentiment changes for the same aspect
-
-Keep together if:
-
-✓ same aspect
-
-✓ same sentiment
-
-✓ multiple adjectives support the same overall sentiment
-
-✓ accessories or amenities belong to the same aspect
-
-✓ contextual information is attached to the same aspect
-
----
-
-## FINAL RULES
-
-* Preserve original wording whenever possible.
-* Never invent aspects.
-* Never invent sentiment.
-* Keep modifiers attached to their aspects.
-* Do not classify aspect categories.
-* Do not classify sentiment labels.
-* Do not over-split coherent descriptions of the same aspect.
-
-Input:
-{sentence}
-
-Output:
-"""
+Output:"""

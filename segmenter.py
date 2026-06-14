@@ -11,6 +11,7 @@ from uos.prompt import UOS_LINGUISTIC_PROMPT
 
 MODEL_ALIASES = {
     "Qwen3-8B-Instruct": "qwen3:8b",
+    "qwen3-8b-instruct": "qwen3:8b",
 }
 PROMPT_VERSION = "linguistic_v11"
 
@@ -20,10 +21,6 @@ def resolve_model_name(name: str) -> str:
 
 
 def build_prompt(sentence: str, aspect_term: str = "") -> str:
-    """Build prompt for UOS segmentation.
-    
-    If aspect_term is provided, appends [aspect: ...] to the sentence.
-    """
     input_text = sentence.strip()
     if aspect_term:
         input_text = f"{input_text}\n[aspect: {aspect_term}]"
@@ -33,11 +30,11 @@ def build_prompt(sentence: str, aspect_term: str = "") -> str:
 class OllamaUOSSegmenter:
     def __init__(
         self,
-        model_name: str = "Qwen3-8B-Instruct",
+        model_name: str = "qwen3:8b",
         host: str = "http://localhost:11434",
-        max_new_tokens: int = 512,
+        max_new_tokens: int = 128,
         temperature: float = 0.1,
-        timeout_s: int = 180,
+        timeout_s: int = 60,
     ) -> None:
         self.model_name = resolve_model_name(model_name)
         self.host = host.rstrip("/")
@@ -85,11 +82,11 @@ class OllamaUOSSegmenter:
         return units
 
     def segment_batch(self, sentences: Sequence[str], aspect_terms: Sequence[str] = ()) -> List[List[str]]:
-        aspect_terms = list(aspect_terms) if aspect_terms else [""] * len(sentences)
-        return [self.segment(s, a) for s, a in zip(sentences, aspect_terms)]
+        pairs = zip(sentences, aspect_terms) if aspect_terms else ((s, "") for s in sentences)
+        return [self.segment(s, a) for s, a in pairs]
 
 
-def check_ollama(host: str = "http://localhost:11434", model_name: str = "Qwen3-8B-Instruct") -> None:
+def check_ollama(host: str = "http://localhost:11434", model_name: str = "qwen3:8b") -> None:
     resolved = resolve_model_name(model_name)
     try:
         with urllib.request.urlopen(f"{host.rstrip('/')}/api/tags", timeout=5) as resp:
