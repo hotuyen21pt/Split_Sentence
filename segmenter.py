@@ -11,6 +11,7 @@ from uos.prompt import UOS_LINGUISTIC_PROMPT
 
 MODEL_ALIASES = {
     "Qwen3-8B-Instruct": "qwen3:8b",
+    "qwen3-8b-instruct": "qwen3:8b",
 }
 PROMPT_VERSION = "linguistic_v11"
 
@@ -19,18 +20,21 @@ def resolve_model_name(name: str) -> str:
     return MODEL_ALIASES.get(name.strip(), name.strip())
 
 
-def build_prompt(sentence: str) -> str:
-    return UOS_LINGUISTIC_PROMPT.replace("{sentence}", sentence.strip())
+def build_prompt(sentence: str, aspect_term: str = "") -> str:
+    input_text = sentence.strip()
+    if aspect_term:
+        input_text = f"{input_text}\n[aspect: {aspect_term}]"
+    return UOS_LINGUISTIC_PROMPT.replace("{sentence}", input_text)
 
 
 class OllamaUOSSegmenter:
     def __init__(
         self,
-        model_name: str = "Qwen3-8B-Instruct",
+        model_name: str = "qwen3:8b",
         host: str = "http://localhost:11434",
-        max_new_tokens: int = 512,
+        max_new_tokens: int = 128,
         temperature: float = 0.1,
-        timeout_s: int = 180,
+        timeout_s: int = 60,
     ) -> None:
         self.model_name = resolve_model_name(model_name)
         self.host = host.rstrip("/")
@@ -68,20 +72,21 @@ class OllamaUOSSegmenter:
             ) from e
         return str((data.get("message") or {}).get("content", ""))
 
-    def segment_with_raw(self, sentence: str) -> tuple[List[str], str]:
-        raw = self._call(build_prompt(sentence))
+    def segment_with_raw(self, sentence: str, aspect_term: str = "") -> tuple[List[str], str]:
+        raw = self._call(build_prompt(sentence, aspect_term))
         units = parse_units(raw) or [sentence.strip()]
         return validate_units(sentence, units), raw
 
-    def segment(self, sentence: str) -> List[str]:
-        units, _ = self.segment_with_raw(sentence)
+    def segment(self, sentence: str, aspect_term: str = "") -> List[str]:
+        units, _ = self.segment_with_raw(sentence, aspect_term)
         return units
 
-    def segment_batch(self, sentences: Sequence[str]) -> List[List[str]]:
-        return [self.segment(s) for s in sentences]
+    def segment_batch(self, sentences: Sequence[str], aspect_terms: Sequence[str] = ()) -> List[List[str]]:
+        pairs = zip(sentences, aspect_terms) if aspect_terms else ((s, "") for s in sentences)
+        return [self.segment(s, a) for s, a in pairs]
 
 
-def check_ollama(host: str = "http://localhost:11434", model_name: str = "Qwen3-8B-Instruct") -> None:
+def check_ollama(host: str = "http://localhost:11434", model_name: str = "qwen3:8b") -> None:
     resolved = resolve_model_name(model_name)
     try:
         with urllib.request.urlopen(f"{host.rstrip('/')}/api/tags", timeout=5) as resp:

@@ -245,8 +245,3 @@ results.jsonl  →  export CSV (uos_val.csv)  →  absa.annotate  →  quadruple
 ```
 
 Xem `src/absa/README.md`.
-
-
-python run_llm_uos_eval.py --data_path dataset/train.apc --output_dir output/test/
-
-python run_llm_uos_eval.py --data_path dataset/train.apc --max_rows 10 --output_dir output/test/

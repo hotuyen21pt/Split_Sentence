@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -121,13 +122,17 @@ def main() -> None:
             f.write(json.dumps(payload, ensure_ascii=False) + "\n")
         new_rows.append(row)
 
+    t_start = time.perf_counter()
     run_corpus(segmenter, pending, on_progress=progress, on_record=write_row)
+    wall_time_s = time.perf_counter() - t_start
 
     if pbar is not None:
         pbar.close()
 
     all_rows = existing_rows + new_rows
     summary = summarize(all_rows)
+    summary["wall_time_s"] = round(wall_time_s, 3)
+    summary["sentences_per_minute"] = round(len(pending) / (wall_time_s / 60), 2) if wall_time_s > 0 else 0
     metrics_path = output_dir / "metrics.json"
     metrics_path.write_text(
         json.dumps(
