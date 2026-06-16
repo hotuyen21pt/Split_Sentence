@@ -13,7 +13,7 @@ MODEL_ALIASES = {
     "Qwen3-8B-Instruct": "qwen3:8b",
     "qwen3-8b-instruct": "qwen3:8b",
 }
-PROMPT_VERSION = "linguistic_v11"
+PROMPT_VERSION = "linguistic_v12"
 
 
 def resolve_model_name(name: str) -> str:
@@ -21,10 +21,7 @@ def resolve_model_name(name: str) -> str:
 
 
 def build_prompt(sentence: str, aspect_term: str = "") -> str:
-    input_text = sentence.strip()
-    if aspect_term:
-        input_text = f"{input_text}\n[aspect: {aspect_term}]"
-    return UOS_LINGUISTIC_PROMPT.replace("{sentence}", input_text)
+    return UOS_LINGUISTIC_PROMPT.replace("{sentence}", sentence.strip())
 
 
 class OllamaUOSSegmenter:

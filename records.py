@@ -45,6 +45,8 @@ def build_record(
     }
     if ok is not None:
         record["metrics"]["ok"] = ok
+    if meta.get("id") is not None:
+        record["id"] = meta["id"]
     record["aspect_terms"] = meta.get("aspect_terms", "")
     record["categories"]   = meta.get("categories", "")
     record["sentiments"]   = meta.get("sentiments", "")
@@ -58,7 +60,10 @@ def build_record(
 def export_row(record: dict) -> dict:
     """Canonical row for results.jsonl."""
     metrics = {k: v for k, v in record["metrics"].items() if k != "ok"}
-    row: dict = {
+    row: dict = {}
+    if record.get("id") is not None:
+        row["id"] = record["id"]
+    row.update({
         "entity_id": record["entity_id"],
         "review_id": record["review_id"],
         "sentence_idx": record["sentence_idx"],
@@ -67,7 +72,7 @@ def export_row(record: dict) -> dict:
         "warnings": record["warnings"],
         "raw_response": record.get("raw_response") or "",
         "metrics": metrics,
-    }
+    })
     row["aspect_terms"] = record.get("aspect_terms", "")
     row["categories"]   = record.get("categories", "")
     row["sentiments"]   = record.get("sentiments", "")

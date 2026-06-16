@@ -1,0 +1,16 @@
+{
+  "model": "qwen3:8b",
+  "prompt_version": "linguistic_v12",
+  "summary": {
+    "n_sentences": 312,
+    "split_rate": 0.5705,
+    "warning_rate": 0.0449,
+    "units_per_sentence_mean": 1.9968,
+    "token_recall_mean": 0.8908,
+    "char_coverage_mean": 0.9591,
+    "unsupported_token_rate_mean": 0.0051,
+    "latency_s_mean": 33.9877,
+    "wall_time_s": 1336.161,
+    "sentences_per_minute": 14.01
+  }
+}

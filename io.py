@@ -32,6 +32,8 @@ def detect_input_format_path(path: Union[str, Path]) -> str:
     path = Path(path)
     if path.suffix.lower() == ".apc":
         return "apc"
+    if path.suffix.lower() == ".csv":
+        return "csv"
     first = _first_json_array_item(path)
     if isinstance(first, dict):
         return "space" if "reviews" in first else "flat"
@@ -198,8 +200,8 @@ def iter_apc_records(path: Union[str, Path], max_rows: int = 0) -> Iterator[dict
         yield from _iter_apc_4line(path, max_rows)
 
 
-def _make_apc_row(row_idx: int, sentence: str, aspect: str, category: str, sentiment: str) -> dict:
-    return {
+def _make_apc_row(row_idx: int, sentence: str, aspect: str, category: str, sentiment: str, row_id=None) -> dict:
+    record = {
         "entity_id":    str(row_idx),
         "review_id":    str(row_idx),
         "sentence_idx": row_idx,
@@ -210,6 +212,9 @@ def _make_apc_row(row_idx: int, sentence: str, aspect: str, category: str, senti
         "sentiments":   sentiment,
         "raw_sentence": sentence,
     }
+    if row_id is not None:
+        record["id"] = str(row_id)
+    return record
 
 
 def _iter_apc_csv(path: Path, max_rows: int = 0) -> Iterator[dict]:
@@ -224,6 +229,48 @@ def _iter_apc_csv(path: Path, max_rows: int = 0) -> Iterator[dict]:
             yield _make_apc_row(row_idx, sentence, aspect, category, sentiment)
             if max_rows and row_idx + 1 >= max_rows:
                 return
+
+
+def iter_csv_records(path: Union[str, Path], max_rows: int = 0) -> Iterator[dict]:
+    """Yield records from a .csv file (sentence,aspect_term,category,sentiment).
+
+    Sentences may contain commas without quoting, so split from the right
+    on exactly 3 delimiters to extract the last 3 fixed fields.
+    Supports an optional leading `id` column (id,sentence,aspect,category,sentiment).
+    """
+    path = Path(path)
+    with open(path, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+
+    first_line = lines[0].lower().lstrip("﻿") if lines else ""
+    has_id = first_line.startswith("id,")
+    start = 1 if first_line.startswith("sentence") or has_id else 0
+    row_idx = 0
+    for line in lines[start:]:
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.rsplit(",", 3)
+        if len(parts) < 4:
+            continue
+        if has_id:
+            id_and_sentence = parts[0].split(",", 1)
+            if len(id_and_sentence) < 2:
+                continue
+            row_id = id_and_sentence[0].strip()
+            sentence = id_and_sentence[1].strip()
+        else:
+            row_id = None
+            sentence = parts[0].strip()
+        if not sentence:
+            continue
+        aspect = parts[1].strip()
+        category = parts[2].strip()
+        sentiment = parts[3].strip()
+        yield _make_apc_row(row_idx, sentence, aspect, category, sentiment, row_id=row_id)
+        row_idx += 1
+        if max_rows and row_idx >= max_rows:
+            return
 
 
 def _iter_apc_4line(path: Path, max_rows: int = 0) -> Iterator[dict]:
@@ -257,6 +304,9 @@ def iter_records(
     fmt = detect_input_format_path(path) if input_format == "auto" else input_format
     if fmt == "apc":
         yield from iter_apc_records(path, max_rows=max_rows or max_reviews)
+        return
+    if fmt == "csv":
+        yield from iter_csv_records(path, max_rows=max_rows or max_reviews)
         return
     if fmt == "space":
         yield from iter_space_records(path, resolve_text_column("space", text_column), max_reviews, max_rows)

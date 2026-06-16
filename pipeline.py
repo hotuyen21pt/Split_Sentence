@@ -14,17 +14,17 @@ from uos.validation import check_case
 _ROOT = Path(__file__).resolve().parent
 UOS_GOLD_CASES = _ROOT / "dataset" / "demo.apc"
 
-ProgressFn = Callable[[int, int | None, float, str], None]
+ProgressFn = Callable[[int, Optional[int], float, str], None]
 RecordFn = Callable[[dict], None]
 
 
-def _default_progress(done: int, total: int | None, latency_s: float, sentence: str) -> None:
+def _default_progress(done: int, total: Optional[int], latency_s: float, sentence: str) -> None:
     preview = sentence[:60] + ("..." if len(sentence) > 60 else "")
     total_display = str(total) if total is not None else "?"
     print(f"  [{done}/{total_display}] {latency_s:.1f}s | {preview}", flush=True)
 
 
-def segment_one(segmenter, sentence: str, aspect_term: str = "") -> tuple[List[str], str]:
+def segment_one(segmenter, sentence: str, aspect_term: str = "") -> "tuple[List[str], str]":
     if hasattr(segmenter, "segment_with_raw"):
         return segmenter.segment_with_raw(sentence, aspect_term)
     units = segmenter.segment(sentence, aspect_term)
@@ -48,7 +48,7 @@ def run_gold_cases(segmenter, cases_path: Path = UOS_GOLD_CASES) -> List[dict]:
     return rows
 
 
-def _process_one(segmenter, i: int, meta: dict) -> tuple[int, dict]:
+def _process_one(segmenter, i: int, meta: dict) -> "tuple[int, dict]":
     t0 = time.perf_counter()
     try:
         aspect_term = meta.get("aspect_terms", "")
@@ -65,9 +65,9 @@ def run_corpus(
     segmenter,
     records: Iterable[dict],
     *,
-    on_progress: ProgressFn | None = _default_progress,
-    on_record: RecordFn | None = None,
-    total: int | None = None,
+    on_progress: Optional[ProgressFn] = _default_progress,
+    on_record: Optional[RecordFn] = None,
+    total: Optional[int] = None,
     workers: int = 8,
 ) -> List[dict]:
     record_list = list(records)
